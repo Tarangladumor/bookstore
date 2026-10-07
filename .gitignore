@@ -1,0 +1,37 @@
+## Build outputs
+[Bb]in/
+[Oo]bj/
+[Memory]Dump/
+[Ll]og/
+[Ll]ogs/
+
+## IDE and Editor specific files
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## ASP.NET Core Secrets & Local Configuration
+# Do NOT commit raw application secrets to version control
+**/Properties/launchSettings.json
+appsettings.Development.json
+appsettings.Local.json
+
+## Publish Outputs
+publish/
+*.Publish.xml
+*.pubxml
+*.azurePubxml
+
+## Frontend Node.js Dependencies (if using React/Angular/Blazor hosted)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+## OS generated files
+.DS_Store
+Thumbs.db
