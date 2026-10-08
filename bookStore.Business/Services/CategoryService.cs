@@ -63,5 +63,6 @@ namespace bookStore.Business.Services
                 return !await _context.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower());
             }
         }
+
     }
 }
