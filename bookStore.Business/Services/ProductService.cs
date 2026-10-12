@@ -29,9 +29,16 @@ namespace bookStore.Business.Services
             }
         }
 
-        public async Task<Product?> GetProductByIdAsync(int id)
+        public async Task<Product?> GetProductByIdAsync(int id, bool includeCategory = false)
         {
-            return await _context.Products.FindAsync(id);
+            if (includeCategory)
+            {
+                return await _context.Products.Include(u => u.Category).FirstOrDefaultAsync(u => u.Id == id);
+            }
+            else
+            {
+                return await _context.Products.FirstOrDefaultAsync(u => u.Id == id);
+            }
         }
 
         public async Task<Product> createProductAsync(Product product)

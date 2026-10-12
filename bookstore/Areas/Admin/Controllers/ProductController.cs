@@ -1,32 +1,39 @@
-﻿using bookstore.Data;
+﻿using System.Reflection;
+using bookstore.Data;
+using bookstore.Utility;
 using bookStore.Business.Services;
 using bookStore.Business.Services.IServices;
 using bookStore.Models;
-using bookStore.Models.VIewModels;
+using bookStore.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace bookstore.Areas.Customer.Controllers
 {
-    [Area("Customer")]
+    [Area("Admin")]
+    [Authorize(Roles = SD.RoleAdmin)]
     public class ProductController : Controller
     {
         private readonly IProductService _productService;
         private readonly ICategoryService _categoryService;
         private readonly IWebHostEnvironment _webHostEnvironment;
-       
+
         public ProductController(IProductService productService, ICategoryService categoryService, IWebHostEnvironment webHostEnvironment)
         {
             _productService = productService;
             _categoryService = categoryService;
             _webHostEnvironment = webHostEnvironment;
         }
+        
+        [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
             return View();
         }
 
-        public async Task<IActionResult> Upsert()
+        [Authorize(Roles = SD.RoleAdmin)]
+        public async Task<IActionResult> Upsert(int? id)
         {
             var categories = await _categoryService.GetAllCategoriesAsync();
 
@@ -39,10 +46,18 @@ namespace bookstore.Areas.Customer.Controllers
                 }),
                 Product = new Product()
             };
-
-            return View(productVM);
+            if (id == null || id == 0)
+            {
+                return View(productVM);
+            }
+            else
+            {
+                productVM.Product = await _productService.GetProductByIdAsync(id.Value);
+                return View(productVM);
+            }
         }
 
+        [Authorize(Roles = SD.RoleAdmin)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Upsert")]
@@ -53,7 +68,8 @@ namespace bookstore.Areas.Customer.Controllers
             {
                 string wwwRootPath = _webHostEnvironment.WebRootPath;
 
-                if(file != null) {
+                if (file != null)
+                {
                     string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
                     string productPath = Path.Combine("images", "products");
                     string finalPath = Path.Combine(wwwRootPath, productPath);
@@ -63,20 +79,29 @@ namespace bookstore.Areas.Customer.Controllers
                         Directory.CreateDirectory(finalPath);
                     }
 
-                    using (var fileStream =  new FileStream(Path.Combine(finalPath, fileName), FileMode.Create))
+                    using (var fileStream = new FileStream(Path.Combine(finalPath, fileName), FileMode.Create))
                     {
                         file.CopyTo(fileStream);
                     }
 
-                    productVM.Product.ImageUrl = Path.Combine(@"\", productPath, fileName).Replace("\\","/");
+                    productVM.Product.ImageUrl = Path.Combine(@"\", productPath, fileName).Replace("\\", "/");
 
                 }
 
+                if (productVM.Product.Id == null || productVM.Product.Id == 0)
+                {
+                    await _productService.createProductAsync(productVM.Product);
+                }
+                else
+                {
+                    await _productService.updateProductAsync(productVM.Product);
+                }
 
-                await _productService.createProductAsync(productVM.Product);
+
                 TempData["success"] = "Product created successfully";
                 return RedirectToAction("Index");
-            }else
+            }
+            else
             {
                 var categories = await _categoryService.GetAllCategoriesAsync();
 
@@ -93,38 +118,47 @@ namespace bookstore.Areas.Customer.Controllers
             }
         }
 
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null || id == 0)
-            {
-                return NotFound();
-            }
-
-            var product = await _productService.GetProductByIdAsync(id.Value);
-            if (product == null)
-            {
-                return NotFound();
-            }
-            return View(product);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [ActionName("Delete")]
-        public async Task<IActionResult> DeletePost(int id)
-        {
-            await _productService.deleteProductAsync(id);  
-            TempData["success"] = "Product deleted successfully";
-            return RedirectToAction("Index");
-          
-        }
-
         #region API CALLS
-
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var products = await _productService.GetAllProductsAsync(true);
             return Json(new { data = products });
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Delete(int id)
+        {
+            if (id == null || id == 0)
+            {
+                return Json(new { success = false, message = "Invalid Id" });
+            }
+
+            var productTobeDeleted = await _productService.GetProductByIdAsync(id);
+            if (productTobeDeleted == null)
+            {
+                return Json(new { success = false, message = "Invalid Id" });
+            }
+
+            //delete the product image
+            if (!string.IsNullOrEmpty(productTobeDeleted.ImageUrl))
+            {
+                string imageUrl = productTobeDeleted.ImageUrl.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+
+                string imagePath = Path.Combine(
+                    _webHostEnvironment.WebRootPath,
+                    imageUrl
+                );
+
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
+                }
+            }
+
+            await _productService.deleteProductAsync(id);
+            return Json(new { success = false, message = "Delete Successful" });
+
         }
 
         #endregion

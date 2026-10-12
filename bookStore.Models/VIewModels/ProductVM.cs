@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace bookStore.Models.VIewModels
+namespace bookStore.Models.ViewModels
 {
     public class ProductVM
     {

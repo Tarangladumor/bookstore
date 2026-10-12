@@ -1,12 +1,15 @@
 ﻿using bookstore.Data;
+using bookstore.Utility;
 using bookStore.Business.Services;
 using bookStore.Business.Services.IServices;
 using bookStore.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace bookstore.Areas.Customer.Controllers
 {
-    [Area("Customer")]
+    [Area("Admin")]
+    [Authorize(Roles = SD.RoleAdmin)]
     public class CategoryController : Controller
     {
         private readonly ICategoryService _categoryService;
@@ -14,6 +17,7 @@ namespace bookstore.Areas.Customer.Controllers
         {
             _categoryService = categoryService;
         }
+        [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
             var categories = await _categoryService.GetAllCategoriesAsync();
