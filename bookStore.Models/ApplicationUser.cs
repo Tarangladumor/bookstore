@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Identity;
 
 namespace bookStore.Models
@@ -12,5 +13,7 @@ namespace bookStore.Models
         public string? City { get; set; }
         public string? State { get; set; }
         public string? PostalCode { get; set; }
+        [NotMapped]
+        public string Role { get; set; }
     }
 }
