@@ -12,4 +12,8 @@
     <ProjectReference Include="..\bookStore.Utility\bookStore.Utility.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Mailjet.Api" Version="4.0.1" />
+  </ItemGroup>
+
 </Project>
