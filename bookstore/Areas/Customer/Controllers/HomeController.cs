@@ -1,3 +1,4 @@
+using bookstore.Utility;
 using bookStore.Business.Services.IServices;
 using bookStore.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -52,6 +53,8 @@ namespace bookstore.Areas.Customer.Controllers
 
             shoppingCart.ApplicationUserId = userId;
             await _shoppingCartService.AddToCartAsync(shoppingCart);
+            var count = await _shoppingCartService.GetCartCountAsync(userId);
+            HttpContext.Session.SetInt32(SD.SessionCart, count);
             TempData["success"] = "Item added to cart";
             return RedirectToAction("Index");
         }

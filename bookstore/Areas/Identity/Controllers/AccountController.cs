@@ -1,10 +1,10 @@
 using bookstore.Utility;
+using bookStore.Business.Services.IServices;
 using bookStore.Models;
 using bookStore.Models.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Identity.Client.NativeInterop;
 
 namespace bookstore.Areas.Identity.Controllers
 {
@@ -14,12 +14,14 @@ namespace bookstore.Areas.Identity.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IShoppingCartService _shoppingCartService;
 
-        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager, IShoppingCartService shoppingCartService)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _roleManager = roleManager;
+            _shoppingCartService = shoppingCartService;
         }
         public IActionResult Login(string? returnUrl = null)
         {
@@ -42,9 +44,13 @@ namespace bookstore.Areas.Identity.Controllers
 
                 if (result.Succeeded)
                 {
-                    if(!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                     {
                         return Redirect(returnUrl);
+                    }
+                    if (User.IsInRole(SD.RoleAdmin) || User.IsInRole(SD.RoleEmployee))
+                    {
+                        return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
                     }
                     return RedirectToAction("Index", "Home", new { area = "Customer" });
                 }
@@ -138,6 +144,7 @@ namespace bookstore.Areas.Identity.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
+            HttpContext.Session.SetInt32(SD.SessionCart, 0);
             return RedirectToAction("Index", "Home", new { area = "Customer" });
         }
     }

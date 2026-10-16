@@ -16,13 +16,15 @@ namespace bookstore.Areas.Customer.Controllers
         private readonly IOrderService _orderService;
         private readonly IShoppingCartService _shoppingCartService;
         private readonly IApplicationUserService _applicationUserService;
+        private readonly IEmailService _emailService;
 
 
-        public CartController(IOrderService orderService, IShoppingCartService shoppingCartService, IApplicationUserService applicationUserService)
+        public CartController(IOrderService orderService, IShoppingCartService shoppingCartService, IApplicationUserService applicationUserService, IEmailService emailService)
         {
             _orderService = orderService;
             _shoppingCartService = shoppingCartService;
             _applicationUserService = applicationUserService;
+            _emailService = emailService;
         }
         public async Task<IActionResult> Index()
         {
@@ -87,6 +89,9 @@ namespace bookstore.Areas.Customer.Controllers
             }).ToList();
 
             await _orderService.CreateOrderAsync(shoppingCartVM.OrderHeader);
+            var user = await _applicationUserService.GetUserByIdAsync(userId);
+
+            await _emailService.SendOrderConfirmationEmailAsync(user.Email, shoppingCartVM.OrderHeader.Id, (decimal)shoppingCartVM.OrderHeader.OrderTotal);
 
             return RedirectToAction("OrderConfirmation", new { id = shoppingCartVM.OrderHeader.Id });
 
@@ -110,6 +115,7 @@ namespace bookstore.Areas.Customer.Controllers
                 {
                     cart.Count++;
                     await _shoppingCartService.UpdateCartAsync(cart);
+                    await UpdateCartSessionAsync();
                 }
             }
 
@@ -123,7 +129,7 @@ namespace bookstore.Areas.Customer.Controllers
             {
                 cart.Count--;
                 await _shoppingCartService.UpdateCartAsync(cart);
-
+                await UpdateCartSessionAsync();
             }
 
             return RedirectToAction(nameof(Index));
@@ -136,7 +142,7 @@ namespace bookstore.Areas.Customer.Controllers
             {
                 cart.Count = 0;
                 await _shoppingCartService.UpdateCartAsync(cart);
-
+                await UpdateCartSessionAsync();
             }
 
             return RedirectToAction(nameof(Index));
@@ -152,7 +158,6 @@ namespace bookstore.Areas.Customer.Controllers
             if (count <= 1)
             {
                 cart.Count = 0;
-                await _shoppingCartService.UpdateCartAsync(cart);
             }
             else
             {
@@ -164,10 +169,22 @@ namespace bookstore.Areas.Customer.Controllers
                 {
                     cart.Count = count;
                 }
-                await _shoppingCartService.UpdateCartAsync(cart);
             }
-
+            await _shoppingCartService.UpdateCartAsync(cart);
+            await UpdateCartSessionAsync();
             return Ok(new { success = true });
+        }
+
+        private async Task UpdateCartSessionAsync()
+        {
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var userId = claimsIdentity?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var count = await _shoppingCartService.GetCartCountAsync(userId);
+                HttpContext.Session.SetInt32(SD.SessionCart, count);
+            }
         }
     }
 }
