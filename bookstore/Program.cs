@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using bookStore.Models;
 using Microsoft.Extensions.Options;
+using bookstore.DataAccess.DbInitializer;
+using BulkyBook.DataAccess.DbInitializer;
+using BulkyBook.Business.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +42,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IShoppingCartService, ShoppingCartService>();
 builder.Services.AddScoped<IApplicationUserService, ApplicationUserService>();
+builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.ConfigureApplicationCookie(options =>
@@ -58,6 +62,7 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 Stripe.StripeConfiguration.ApiKey = builder.Configuration.GetSection("stripe:SecretKey").Get<string>();
 
 app.UseSession();
@@ -69,6 +74,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+await SeedDatabase();
 
 app.MapControllerRoute(
     name: "MyArea",
@@ -84,3 +91,13 @@ app.MapControllerRoute(
 
 
 app.Run();
+
+async Task SeedDatabase()
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+
+        await dbInitializer.InitializeAsync();
+    }
+}

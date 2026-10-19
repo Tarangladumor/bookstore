@@ -97,6 +97,10 @@ namespace bookstore.Areas.Customer.Controllers
                 var domain = Request.Scheme + "://" + Request.Host.Value + "/";
 
                 var sessionUrl = await _orderService.CreateStripeCheckoutSessionAsync(shoppingCartVM.OrderHeader, shoppingCartVM.ShoppingCartList, domain);
+
+                await _shoppingCartService.CleatCartAsync(userId);
+                HttpContext.Session.SetInt32(SD.SessionCart, 0);
+
                 Response.Headers.Append("Location", sessionUrl);
                 return new StatusCodeResult(303);
             }
