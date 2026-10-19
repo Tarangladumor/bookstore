@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Data;
+using System.Reflection;
 using System.Security.Claims;
 using bookstore.Data;
 using bookstore.Utility;
@@ -90,13 +91,31 @@ namespace bookstore.Areas.Customer.Controllers
                     successMessage = "Order processing started successfully.";
                     break;
                 case SD.StatusCancelled:
-                    await _orderService.UpdateOrderStatusAsync(OrderHeader.Id, status);
-                    successMessage = "Order refunded successfully.";
-                    break;
                 case SD.StatusRefunded:
-                    await _orderService.UpdateOrderStatusAsync(OrderHeader.Id, status);
-                    successMessage = "Order cancelled successfully.";
+                    try
+                    {
+                        bool refundIssued = await _orderService.CancelOrderWithRefundAsync(OrderHeader.Id);
+                        if (refundIssued)
+                        {
+                            successMessage = "Order cancelled and refund issued successfully. Funds will be returned to customer within 5-10 business days.";
+                        }
+                        else
+                        {
+                            successMessage = "Order cancelled successfully. (No payment was processed)";
+                        }
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        TempData["error"] = ex.Message;
+                        return RedirectToAction(nameof(Details), new { orderId = OrderHeader.Id });
+                    }
+                    catch (Stripe.StripeException ex)
+                    {
+                        TempData["error"] = $"Order cancelled but refund failed: {ex.Message}. Please process refund manually in Stripe Dashboard.";
+                        return RedirectToAction(nameof(Details), new { orderId = OrderHeader.Id });
+                    }
                     break;
+
                 case SD.StatusShipped:
 
                     if (string.IsNullOrEmpty(OrderHeader.Carrier) || string.IsNullOrEmpty(OrderHeader.TrackingNumber))
@@ -114,7 +133,7 @@ namespace bookstore.Areas.Customer.Controllers
                     TempData["error"] = "Invalid status update.";
                     return RedirectToAction(nameof(Details), new { orderId = OrderHeader.Id });
             }
-            TempData["Success"] = successMessage; 
+            TempData["Success"] = successMessage;
 
             return RedirectToAction(nameof(Details), new { orderId = OrderHeader.Id });
         }

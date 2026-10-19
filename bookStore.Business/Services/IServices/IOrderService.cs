@@ -15,7 +15,15 @@ namespace bookStore.Business.Services.IServices
 
         Task UpdateOrderAsync(OrderHeader orderHeader);
 
-        Task UpdateOrderStatusAsync(int id,string orderStatus, string? carrier = null, string? trackingumber = null);
+        Task UpdateOrderStatusAsync(int id, string orderStatus, string? carrier = null, string? trackingumber = null);
+
+        Task UpdateStripePaymentAsync(int orderId, string sessionid, string paymentIntentId);
+
+        Task<bool> CancelOrderWithRefundAsync(int orderId);
+
+        Task<string> CreateStripeCheckoutSessionAsync(OrderHeader orderHeader, IEnumerable<ShoppingCart> cartItems, string domain);
+
+        Task<bool> VerifyStripePaymentAsync(OrderHeader orderHeader);
 
     }
 }
